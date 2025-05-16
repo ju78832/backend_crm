@@ -1,11 +1,11 @@
 import express from "express";
-import { authenticateToken } from "../middlewares/auth";
-import claimController from "../controllers/claimController";
+import { authenticate } from "../middlewares/auth.js";
+import { claimController } from "../controllers/claim.js";
 
 const router = express.Router();
 
 // All claim routes require authentication
-router.use(authenticateToken);
+router.use(authenticate);
 
 // Claim routes
 router.get("/", claimController.getAllClaims);

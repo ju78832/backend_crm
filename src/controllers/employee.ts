@@ -135,9 +135,9 @@ export const updateEmployee = async (req, res) => {
       return res.status(404).json({ message: "Employee not found" });
     }
 
-    // Prepare updated data
+    // Prepare updated data with type assertion
     const updatedData = {
-      ...existingEmployee.data,
+      ...(existingEmployee.data as Record<string, any>),
       ...(data || {}),
     };
 
@@ -265,12 +265,10 @@ export const getEmployeeStatistics = async (req, res) => {
     });
   } catch (error) {
     console.error("Get employee statistics error:", error);
-    res
-      .status(500)
-      .json({
-        message: "Failed to retrieve employee statistics",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Failed to retrieve employee statistics",
+      error: error.message,
+    });
   }
 };
 
@@ -306,8 +304,8 @@ export const getEmployeePerformance = async (req, res) => {
     });
 
     // Process claims by date
-    const claimsByDate = {};
-    const claimsByPolicyType = {};
+    const claimsByDate: Record<string, number> = {};
+    const claimsByPolicyType: Record<string, number> = {};
 
     claims.forEach((claim) => {
       // Format date as YYYY-MM-DD
@@ -321,8 +319,12 @@ export const getEmployeePerformance = async (req, res) => {
 
       // Count claims by policy type
       const policyTypeId = claim.policy_id.toString();
+      const policyTypeData = claim.policyType?.data as Record<
+        string,
+        any
+      > | null;
       const policyTypeName =
-        claim.policyType?.data?.name || `Policy Type ${policyTypeId}`;
+        policyTypeData?.name || `Policy Type ${policyTypeId}`;
 
       if (!claimsByPolicyType[policyTypeName]) {
         claimsByPolicyType[policyTypeName] = 0;
@@ -345,11 +347,9 @@ export const getEmployeePerformance = async (req, res) => {
     });
   } catch (error) {
     console.error("Get employee performance error:", error);
-    res
-      .status(500)
-      .json({
-        message: "Failed to retrieve employee performance",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Failed to retrieve employee performance",
+      error: error.message,
+    });
   }
 };

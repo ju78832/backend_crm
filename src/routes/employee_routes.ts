@@ -1,8 +1,7 @@
-// src/routes/employeeRoutes.js
-import express from "express";
-import { authenticateToken, authorizeAdmin } from "../middlewares/auth";
-import employeeController from "../controllers/employeeController";
+const express = require("express");
 const router = express.Router();
+const employeeController = require("../controllers/employeeController");
+const { authenticateToken, authorizeAdmin } = require("../middlewares/auth");
 
 // All employee routes require authentication
 router.use(authenticateToken);

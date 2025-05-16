@@ -1,21 +1,57 @@
-import express from "express";
-import customerController from "../controllers/customerController";
-import { authenticateToken } from "../middlewares/auth";
+import express, { Request, Response, RequestHandler } from "express";
+import customerController from "../controllers/customer.js";
+import { authenticate } from "../middlewares/auth.js";
+
+interface CustomerQuery {
+  page?: string | number;
+  limit?: string | number;
+  sortBy?: string;
+  order?: string;
+  city?: string;
+  email?: string;
+  query?: string;
+  status?: string;
+}
+
+interface CustomerParams {
+  id: string;
+}
 
 const router = express.Router();
 
 // All customer routes require authentication
-router.use(authenticateToken);
+router.use(authenticate);
 
 // Customer routes
-router.get("/", customerController.getAllCustomers);
-router.get("/:id", customerController.getCustomerById);
-router.post("/", customerController.createCustomer);
-router.put("/:id", customerController.updateCustomer);
-router.delete("/:id", customerController.deleteCustomer);
+router.get(
+  "/",
+  customerController.getAllCustomers as unknown as RequestHandler
+);
+router.get(
+  "/:id",
+  customerController.getCustomerById as unknown as RequestHandler
+);
+router.post(
+  "/",
+  customerController.createCustomer as unknown as RequestHandler
+);
+router.put(
+  "/:id",
+  customerController.updateCustomer as unknown as RequestHandler
+);
+router.delete(
+  "/:id",
+  customerController.deleteCustomer as unknown as RequestHandler
+);
 
 // Additional routes
-router.get("/:id/claims", customerController.getCustomerClaims);
-router.get("/search", customerController.searchCustomers);
+router.get(
+  "/:id/claims",
+  customerController.getCustomerClaims as unknown as RequestHandler
+);
+router.get(
+  "/search",
+  customerController.searchCustomers as unknown as RequestHandler
+);
 
-module.exports = router;
+export default router;

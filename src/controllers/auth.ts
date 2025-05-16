@@ -1,11 +1,39 @@
 // src/controllers/authController.js
-import { PrismaClient } from "../../generated/prisma/index.js";
+import { PrismaClient, UserProfile, Auth } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { Request, Response } from "express";
+
 const prisma = new PrismaClient();
 
+interface UserData {
+  email: string;
+  firstName: string;
+  lastName: string;
+  role?: string;
+  [key: string]: any;
+}
+
+interface AuthMetadata {
+  createdAt?: string;
+  lastLogin?: string;
+  loginAttempts: number;
+  resetToken?: string;
+  resetTokenExpiry?: string;
+  passwordChangedAt?: string;
+  [key: string]: any;
+}
+
+interface CustomRequest extends Request {
+  user?: {
+    id: number;
+    auth_id: string;
+    role?: string;
+  };
+}
+
 const authController = {
-  login: async (req, res) => {
+  login: async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
 
@@ -31,14 +59,17 @@ const authController = {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
+      const userData = userProfile.data as UserData;
+      const authMetadata = userProfile.auth.metadata as AuthMetadata;
+
       // Generate JWT token
       const token = jwt.sign(
         {
-          id: userProfile.id,
-          auth_id: userProfile.auth_id,
-          role: userProfile.data?.role || "user",
+          id: Number(userProfile.id),
+          auth_id: Number(userProfile.auth_id),
+          role: userData.role || "user",
         },
-        process.env.JWT_SECRET,
+        process.env.JWT_SECRET || "fallback_secret",
         { expiresIn: "24h" }
       );
 
@@ -47,7 +78,7 @@ const authController = {
         where: { id: userProfile.auth_id },
         data: {
           metadata: {
-            ...userProfile.auth.metadata,
+            ...authMetadata,
             lastLogin: new Date().toISOString(),
           },
         },
@@ -58,18 +89,19 @@ const authController = {
         token,
         user: {
           id: userProfile.id,
-          ...userProfile.data,
+          ...userData,
         },
       });
     } catch (error) {
       console.error("Login error:", error);
-      res
-        .status(500)
-        .json({ message: "Internal server error", error: error.message });
+      res.status(500).json({
+        message: "Internal server error",
+        error: (error as Error).message,
+      });
     }
   },
 
-  register: async (req, res) => {
+  register: async (req: Request, res: Response) => {
     try {
       const { email, password, firstName, lastName, role = "user" } = req.body;
 
@@ -95,7 +127,13 @@ const authController = {
         data: {
           salt,
           current_hash: hashedPassword,
-          metadata: { createdAt: new Date().toISOString(), loginAttempts: 0 },
+          metadata: {
+            createdAt: new Date().toISOString(),
+            loginAttempts: 0,
+            resetToken: null,
+            resetTokenExpiry: null,
+            passwordChangedAt: null,
+          } as AuthMetadata,
         },
       });
 
@@ -111,11 +149,11 @@ const authController = {
       // Generate JWT token
       const token = jwt.sign(
         {
-          id: userProfile.id,
-          auth_id: auth.id,
+          id: Number(userProfile.id),
+          auth_id: Number(auth.id),
           role,
         },
-        process.env.JWT_SECRET,
+        process.env.JWT_SECRET || "fallback_secret",
         { expiresIn: "24h" }
       );
 
@@ -132,38 +170,40 @@ const authController = {
       });
     } catch (error) {
       console.error("Registration error:", error);
-      res
-        .status(500)
-        .json({ message: "Internal server error", error: error.message });
+      res.status(500).json({
+        message: "Internal server error",
+        error: (error as Error).message,
+      });
     }
   },
 
-  // Get current user
-  getCurrentUser: async (req, res) => {
+  getCurrentUser: async (req: CustomRequest, res: Response) => {
     try {
       const userProfile = await prisma.userProfile.findUnique({
-        where: { id: req.user.id },
+        where: { id: req.user?.id },
       });
 
       if (!userProfile) {
         return res.status(404).json({ message: "User not found" });
       }
 
+      const userData = userProfile.data as UserData;
+
       res.status(200).json({
         id: userProfile.id,
-        ...userProfile.data,
+        ...userData,
         metadata: userProfile.metadata,
       });
     } catch (error) {
       console.error("Get current user error:", error);
-      res
-        .status(500)
-        .json({ message: "Internal server error", error: error.message });
+      res.status(500).json({
+        message: "Internal server error",
+        error: (error as Error).message,
+      });
     }
   },
 
-  // forget password
-  forgotPassword: async (req, res) => {
+  forgotPassword: async (req: Request, res: Response) => {
     try {
       const { email } = req.body;
 
@@ -171,38 +211,32 @@ const authController = {
         return res.status(400).json({ message: "Email is required" });
       }
 
-      // Find user by email
       const userProfile = await prisma.userProfile.findFirst({
         where: { data: { path: ["email"], equals: email } },
         include: { auth: true },
       });
 
       if (!userProfile) {
-        // Return success even if user not found for security reasons
         return res.status(200).json({
           message:
             "If your email is registered, you will receive a password reset link",
         });
       }
 
-      // Generate reset token
       const resetToken = await bcrypt.genSalt(10);
       const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
+      const authMetadata = userProfile.auth.metadata as AuthMetadata;
 
-      // Save reset token to auth metadata
       await prisma.auth.update({
         where: { id: userProfile.auth_id },
         data: {
           metadata: {
-            ...userProfile.auth.metadata,
+            ...authMetadata,
             resetToken,
             resetTokenExpiry: resetTokenExpiry.toISOString(),
           },
         },
       });
-
-      // In a real application, send email with reset link here
-      // For this example, we'll just return success
 
       res.status(200).json({
         message:
@@ -210,13 +244,14 @@ const authController = {
       });
     } catch (error) {
       console.error("Forgot password error:", error);
-      res
-        .status(500)
-        .json({ message: "Internal server error", error: error.message });
+      res.status(500).json({
+        message: "Internal server error",
+        error: (error as Error).message,
+      });
     }
   },
-  // Reset password
-  resetPassword: async (req, res) => {
+
+  resetPassword: async (req: Request, res: Response) => {
     try {
       const { token, newPassword } = req.body;
 
@@ -226,7 +261,6 @@ const authController = {
           .json({ message: "Token and new password are required" });
       }
 
-      // Find auth record with matching reset token
       const auth = await prisma.auth.findFirst({
         where: {
           metadata: {
@@ -240,24 +274,23 @@ const authController = {
         return res.status(400).json({ message: "Invalid or expired token" });
       }
 
-      // Check if token is expired
-      const resetTokenExpiry = new Date(auth.metadata.resetTokenExpiry);
+      const authMetadata = auth.metadata as AuthMetadata;
+      const resetTokenExpiry = new Date(authMetadata.resetTokenExpiry || "");
+
       if (resetTokenExpiry < new Date()) {
         return res.status(400).json({ message: "Reset token has expired" });
       }
 
-      // Generate new salt and hash for the new password
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-      // Update auth record
       await prisma.auth.update({
         where: { id: auth.id },
         data: {
           salt,
           current_hash: hashedPassword,
           metadata: {
-            ...auth.metadata,
+            ...authMetadata,
             resetToken: null,
             resetTokenExpiry: null,
             passwordChangedAt: new Date().toISOString(),
@@ -268,21 +301,18 @@ const authController = {
       res.status(200).json({ message: "Password has been reset successfully" });
     } catch (error) {
       console.error("Reset password error:", error);
-      res
-        .status(500)
-        .json({ message: "Internal server error", error: error.message });
+      res.status(500).json({
+        message: "Internal server error",
+        error: (error as Error).message,
+      });
     }
   },
 
-  // user logout
-  logout: async (req, res) => {
-    // In a JWT-based authentication system, we don't need to do anything on the server
-    // The client should discard the token
+  logout: async (req: Request, res: Response) => {
     res.status(200).json({ message: "Logged out successfully" });
   },
 
-  // Change password while logged in PUT /api/auth/change-password
-  changePassword: async (req, res) => {
+  changePassword: async (req: CustomRequest, res: Response) => {
     try {
       const { currentPassword, newPassword } = req.body;
 
@@ -292,16 +322,14 @@ const authController = {
           .json({ message: "Current and new passwords are required" });
       }
 
-      // Get auth record
       const auth = await prisma.auth.findUnique({
-        where: { id: req.user.auth_id },
+        where: { id: req.user?.auth_id },
       });
 
       if (!auth) {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Verify current password
       const { salt, current_hash } = auth;
       const hashedCurrentPassword = await bcrypt.hash(currentPassword, salt);
 
@@ -311,18 +339,17 @@ const authController = {
           .json({ message: "Current password is incorrect" });
       }
 
-      // Generate new salt and hash for the new password
       const newSalt = await bcrypt.genSalt(10);
       const hashedNewPassword = await bcrypt.hash(newPassword, newSalt);
+      const authMetadata = auth.metadata as AuthMetadata;
 
-      // Update auth record
       await prisma.auth.update({
         where: { id: auth.id },
         data: {
           salt: newSalt,
           current_hash: hashedNewPassword,
           metadata: {
-            ...auth.metadata,
+            ...authMetadata,
             passwordChangedAt: new Date().toISOString(),
           },
         },
@@ -331,11 +358,12 @@ const authController = {
       res.status(200).json({ message: "Password changed successfully" });
     } catch (error) {
       console.error("Change password error:", error);
-      res
-        .status(500)
-        .json({ message: "Internal server error", error: error.message });
+      res.status(500).json({
+        message: "Internal server error",
+        error: (error as Error).message,
+      });
     }
   },
 };
 
-module.exports = authController;
+export default authController;

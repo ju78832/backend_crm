@@ -1,9 +1,30 @@
 // src/controllers/customerController.js
 import { PrismaClient } from "@prisma/client";
+import { Response, Request } from "express";
+
+interface CustomerFilters {
+  city?: string;
+  email?: { contains: string };
+}
+
+interface CustomerQuery {
+  page?: string | number;
+  limit?: string | number;
+  sortBy?: string;
+  order?: string;
+  city?: string;
+  email?: string;
+  query?: string;
+  status?: string;
+}
+
 const prisma = new PrismaClient();
 const customerController = {
   // Get all customers with pagination
-  getAllCustomers: async (req, res) => {
+  getAllCustomers: async (
+    req: Request<{}, {}, {}, CustomerQuery>,
+    res: Response
+  ) => {
     try {
       const {
         page = 1,
@@ -11,10 +32,10 @@ const customerController = {
         sortBy = "createdAt",
         order = "desc",
       } = req.query;
-      const skip = (page - 1) * limit;
+      const skip = (Number(page) - 1) * Number(limit);
 
       // Parse filters
-      const filters = {};
+      const filters: CustomerFilters = {};
       if (req.query.city) filters.city = req.query.city;
       if (req.query.email) filters.email = { contains: req.query.email };
 
@@ -24,9 +45,9 @@ const customerController = {
       // Get customers
       const customers = await prisma.customer.findMany({
         where: filters,
-        skip: parseInt(skip),
-        take: parseInt(limit),
-        orderBy: { [sortBy]: order },
+        skip: Number(skip),
+        take: Number(limit),
+        orderBy: { [sortBy as string]: order },
         include: {
           _count: {
             select: { claims: true },
@@ -43,21 +64,22 @@ const customerController = {
         customers: formattedCustomers,
         pagination: {
           total: totalCount,
-          page: parseInt(page),
-          limit: parseInt(limit),
-          pages: Math.ceil(totalCount / limit),
+          page: Number(page),
+          limit: Number(limit),
+          pages: Math.ceil(totalCount / Number(limit)),
         },
       });
     } catch (error) {
       console.error("Get customers error:", error);
-      res
-        .status(500)
-        .json({ message: "Internal server error", error: error.message });
+      res.status(500).json({
+        message: "Internal server error",
+        error: (error as Error).message,
+      });
     }
   },
 
   // Get customer by ID Get api/customers/:id
-  getCustomerById: async (req, res) => {
+  getCustomerById: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
 
@@ -82,14 +104,15 @@ const customerController = {
       res.status(200).json(formattedCustomer);
     } catch (error) {
       console.error("Get customer error:", error);
-      res
-        .status(500)
-        .json({ message: "Internal server error", error: error.message });
+      res.status(500).json({
+        message: "Internal server error",
+        error: (error as Error).message,
+      });
     }
   },
 
   // Create new customer POST api/customers
-  createCustomer: async (req, res) => {
+  createCustomer: async (req: Request, res: Response) => {
     try {
       const { name, city, number, email } = req.body;
 
@@ -121,14 +144,15 @@ const customerController = {
       });
     } catch (error) {
       console.error("Create customer error:", error);
-      res
-        .status(500)
-        .json({ message: "Internal server error", error: error.message });
+      res.status(500).json({
+        message: "Internal server error",
+        error: (error as Error).message,
+      });
     }
   },
 
   // Update customer by ID PUT api/customers/:id
-  updateCustomer: async (req, res) => {
+  updateCustomer: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const { name, city, number, email } = req.body;
@@ -169,14 +193,15 @@ const customerController = {
       });
     } catch (error) {
       console.error("Update customer error:", error);
-      res
-        .status(500)
-        .json({ message: "Internal server error", error: error.message });
+      res.status(500).json({
+        message: "Internal server error",
+        error: (error as Error).message,
+      });
     }
   },
 
   // Delete customer by ID DELETE api/customers/:id
-  deleteCustomer: async (req, res) => {
+  deleteCustomer: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
 
@@ -209,9 +234,10 @@ const customerController = {
       res.status(200).json({ message: "Customer deleted successfully" });
     } catch (error) {
       console.error("Delete customer error:", error);
-      res
-        .status(500)
-        .json({ message: "Internal server error", error: error.message });
+      res.status(500).json({
+        message: "Internal server error",
+        error: (error as Error).message,
+      });
     }
   },
 
@@ -219,7 +245,10 @@ const customerController = {
    * Get customer claims
    * @route GET /api/customers/:id/claims
    */
-  getCustomerClaims: async (req, res) => {
+  getCustomerClaims: async (
+    req: Request<{ id: string }, {}, {}, CustomerQuery>,
+    res: Response
+  ) => {
     try {
       const { id } = req.params;
       const { status } = req.query;
@@ -234,7 +263,7 @@ const customerController = {
       }
 
       // Prepare filter
-      const filter = { customer_id: parseInt(id) };
+      const filter: any = { customer_id: parseInt(id) };
       if (status) {
         filter.metadata = {
           path: ["status"],
@@ -267,31 +296,35 @@ const customerController = {
       const formattedClaims = claims.map((claim) => ({
         id: claim.id,
         details: claim.details,
-        status: claim.metadata?.status,
-        claimAmount: claim.metadata?.claimAmount,
-        incidentDate: claim.metadata?.incidentDate,
+        status: (claim.metadata as any)?.status,
+        claimAmount: (claim.metadata as any)?.claimAmount,
+        incidentDate: (claim.metadata as any)?.incidentDate,
         createdAt: claim.createdAt,
         updatedAt: claim.updatedAt,
         employee: claim.employee,
         policyType: {
           id: claim.policyType.id,
-          name: claim.policyType.data?.name,
-          description: claim.policyType.data?.description,
+          name: (claim.policyType.data as any)?.name,
+          description: (claim.policyType.data as any)?.description,
         },
       }));
 
       res.status(200).json({ claims: formattedClaims });
     } catch (error) {
       console.error("Get customer claims error:", error);
-      res
-        .status(500)
-        .json({ message: "Internal server error", error: error.message });
+      res.status(500).json({
+        message: "Internal server error",
+        error: (error as Error).message,
+      });
     }
   },
 
   // Search customers by name, email, or city
   // GET api/customers/search?query=searchTerm&page=1&limit=10
-  searchCustomers: async (req, res) => {
+  searchCustomers: async (
+    req: Request<{}, {}, {}, CustomerQuery>,
+    res: Response
+  ) => {
     try {
       const { query, page = 1, limit = 10 } = req.query;
 
@@ -299,7 +332,7 @@ const customerController = {
         return res.status(400).json({ message: "Search query is required" });
       }
 
-      const skip = (page - 1) * limit;
+      const skip = (Number(page) - 1) * Number(limit);
 
       // Search customers by name or email
       const customers = await prisma.customer.findMany({
@@ -311,8 +344,8 @@ const customerController = {
             { number: { contains: query } },
           ],
         },
-        skip: parseInt(skip),
-        take: parseInt(limit),
+        skip: Number(skip),
+        take: Number(limit),
         include: {
           _count: {
             select: { claims: true },
@@ -341,18 +374,19 @@ const customerController = {
         customers: formattedCustomers,
         pagination: {
           total: totalCount,
-          page: parseInt(page),
-          limit: parseInt(limit),
-          pages: Math.ceil(totalCount / limit),
+          page: Number(page),
+          limit: Number(limit),
+          pages: Math.ceil(totalCount / Number(limit)),
         },
       });
     } catch (error) {
       console.error("Search customers error:", error);
-      res
-        .status(500)
-        .json({ message: "Internal server error", error: error.message });
+      res.status(500).json({
+        message: "Internal server error",
+        error: (error as Error).message,
+      });
     }
   },
 };
 
-module.exports = customerController;
+export default customerController;

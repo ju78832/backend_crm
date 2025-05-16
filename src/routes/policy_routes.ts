@@ -1,23 +1,23 @@
 import express from "express";
-import { authtokenicateToken, authorizeAdmin } from "../middlewares/auth";
-import policyTypeController from "../controllers/policyTypeController";
+import { authenticate, authorize } from "../middlewares/auth.js";
+import { policyController } from "../controllers/policy.js";
 
 const router = express.Router();
 
 // All policy type routes require authentication
-router.use(authenticateToken);
+router.use(authenticate);
 
 // Public routes for authenticated users
-router.get("/", policyTypeController.getAllPolicyTypes);
-router.get("/:id", policyTypeController.getPolicyTypeById);
+router.get("/", policyController.getAllPolicies);
+router.get("/:id", policyController.getPolicyById);
 
 // Admin only routes
-router.post("/", authorizeAdmin, policyTypeController.createPolicyType);
-router.put("/:id", authorizeAdmin, policyTypeController.updatePolicyType);
-router.delete("/:id", authorizeAdmin, policyTypeController.deletePolicyType);
+router.post("/", authorize("admin"), policyController.createPolicy);
+router.put("/:id", authorize("admin"), policyController.updatePolicy);
+router.delete("/:id", authorize("admin"), policyController.deletePolicy);
 
 // Additional routes
-router.get("/:id/claims", policyTypeController.getPolicyTypeClaims);
-router.get("/:id/stats", policyTypeController.getPolicyTypeStats);
+router.get("/:id/claims", policyController.getPolicyAnalytics);
+router.get("/:id/stats", policyController.getPolicyAnalytics);
 
-module.exports = router;
+export default router;
