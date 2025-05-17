@@ -1,22 +1,46 @@
-const express = require("express");
-const router = express.Router();
-const employeeController = require("../controllers/employeeController");
-const { authenticateToken, authorizeAdmin } = require("../middlewares/auth");
+import express, { Router, RequestHandler } from "express";
+import * as employeeController from "../controllers/employeeController.js";
+import { authenticate, authorize } from "../middlewares/auth.js";
 
-// All employee routes require authentication
-router.use(authenticateToken);
+const router: Router = express.Router();
+
+router.use(authenticate);
 
 // General employee routes
-router.get("/", employeeController.getAllEmployees);
-router.get("/:id", employeeController.getEmployeeById);
+router.get(
+  "/",
+  employeeController.getAllEmployees as unknown as RequestHandler
+);
+router.get(
+  "/:id",
+  employeeController.getEmployeeById as unknown as RequestHandler
+);
 
 // Admin only routes
-router.post("/", authorizeAdmin, employeeController.createEmployee);
-router.put("/:id", authorizeAdmin, employeeController.updateEmployee);
-router.delete("/:id", authorizeAdmin, employeeController.deleteEmployee);
+router.post(
+  "/",
+  authorize(["admin"]),
+  employeeController.createEmployee as unknown as RequestHandler
+);
+router.put(
+  "/:id",
+  authorize(["admin"]),
+  employeeController.updateEmployee as unknown as RequestHandler
+);
+router.delete(
+  "/:id",
+  authorize(["admin"]),
+  employeeController.deleteEmployee as unknown as RequestHandler
+);
 
 // Additional routes
-router.get("/:id/claims", employeeController.getEmployeeClaims);
-router.get("/:id/performance", employeeController.getEmployeePerformance);
+router.get(
+  "/:id/claims",
+  employeeController.getEmployeeClaims as unknown as RequestHandler
+);
+router.get(
+  "/:id/performance",
+  employeeController.getEmployeePerformance as unknown as RequestHandler
+);
 
-module.exports = router;
+export default router;
