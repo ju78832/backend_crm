@@ -21,4 +21,4 @@ router.post("/:id/documents", claimController.uploadClaimDocuments);
 router.get("/:id/documents", claimController.getClaimDocuments);
 router.put("/:id/status", claimController.updateClaimStatus);
 
-module.exports = router;
+export default router;
