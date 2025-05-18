@@ -12,6 +12,13 @@
   "author": "",
   "license": "ISC",
   "description": "",
+  "dependencies": {
+    "@prisma/client": "^6.7.0",
+    "bcryptjs": "^3.0.2",
+    "concurrently": "^9.1.2",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0"
+  },
   "devDependencies": {
     "@types/express": "^5.0.1",
     "@types/node": "^22.15.17",
@@ -26,12 +33,5 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3"
-  },
-  "dependencies": {
-    "@prisma/client": "^6.7.0",
-    "bcryptjs": "^3.0.2",
-    "concurrently": "^9.1.2",
-    "jsonwebtoken": "^9.0.2",
-    "morgan": "^1.10.0"
   }
 }
