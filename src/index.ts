@@ -1,11 +1,10 @@
-import { PrismaClient } from "../generated/prisma/index.js";
+import { PrismaClient } from './generated/prisma/client.js'
 import express from "express";
 import { config } from "dotenv";
 import morgan from "morgan";
 import ApiRoutes from "./routes/index.js";
 
-const prisma = new PrismaClient();
-
+const prisma = new PrismaClient()
 config();
 const app = express();
 app.use(express.json());
