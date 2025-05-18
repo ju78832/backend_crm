@@ -1,5 +1,5 @@
 // src/controllers/authController.js
-import { PrismaClient, UserProfile, Auth } from "@prisma/client";
+import { PrismaClient } from "../generated/prisma/index.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { Request, Response } from "express";

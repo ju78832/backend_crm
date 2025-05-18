@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../generated/prisma/index.js";
 import jwt from "jsonwebtoken";
 import { hashPassword, verifyPassword } from "../middlewares/auth.js";
 import { Request, Response } from "express";

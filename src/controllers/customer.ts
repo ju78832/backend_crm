@@ -1,5 +1,5 @@
 // src/controllers/customerController.js
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../generated/prisma/index.js";
 import { Response, Request } from "express";
 
 interface CustomerFilters {
