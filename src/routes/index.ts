@@ -5,6 +5,7 @@ import policyRoutes from "../routes/policy_routes.js";
 import customerRoutes from "../routes/customer_routes.js";
 import employeeRoutes from "../routes/employee_routes.js";
 import claimRoutes from "../routes/claim_routes.js";
+import authRoutes from "../routes/auth_routes.js";
 
 const router: Router = express.Router();
 
@@ -14,5 +15,6 @@ router.use("/policy-types", policyRoutes);
 router.use("/customers", customerRoutes);
 router.use("/employees", employeeRoutes);
 router.use("/claims", claimRoutes);
+router.use("/auth", authRoutes);
 
 export default router;
