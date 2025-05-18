@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "main": "index.ts",
   "type": "module",
-  "scripts": {
-    "dev": "concurrently \"npx tsc --watch\" \"nodemon -q dist/index.js\" ",
-    "build": "tsc",
-    "start": "node dist/index.js"
-  },
+"scripts": {
+  "dev": "nodemon --watch src --ext ts --exec tsx src/index.ts",
+  "start": "tsx src/index.ts",
+  "build": "tsc"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
