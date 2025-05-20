@@ -1,9 +1,8 @@
-import { PrismaClient } from "../generated/prisma/index.js";
+import { PrismaClient } from "../generated/prisma/client.js";
 
 const prisma = new PrismaClient();
 
 export const claimController = {
-  // Get all claims with pagination
   getAllClaims: async (req, res) => {
     try {
       const page = parseInt(req.query.page) || 1;
@@ -558,6 +557,127 @@ export const claimController = {
     } catch (error) {
       console.error("Error updating claim status:", error);
       res.status(500).json({ error: "Failed to update claim status" });
+    }
+  },
+  filterClaims: async (req, res) => {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const skip = (page - 1) * limit;
+
+      // Extract filter parameters
+      const policyNumber = req.query.policyNumber;
+      const customerName = req.query.customerName;
+      const employeeName = req.query.employeeName;
+      const status = req.query.status;
+      const dateFrom = req.query.dateFrom ? new Date(req.query.dateFrom) : null;
+      const dateTo = req.query.dateTo ? new Date(req.query.dateTo) : null;
+
+      //  where conditions
+      const whereConditions: any = {};
+
+      //  need to use nested conditions
+      const AND = [];
+
+      // add data to AND array
+      if (policyNumber) {
+        AND.push({
+          policyType: {
+            number: {
+              contains: policyNumber,
+              mode: "insensitive",
+            },
+          },
+        });
+      }
+
+      // Customer name filter
+      if (customerName) {
+        AND.push({
+          customer: {
+            name: {
+              contains: customerName,
+              mode: "insensitive",
+            },
+          },
+        });
+      }
+
+      // Employee name filter
+      if (employeeName) {
+        AND.push({
+          employee: {
+            name: {
+              contains: employeeName,
+              mode: "insensitive",
+            },
+          },
+        });
+      }
+
+      // Date range filter
+      if (dateFrom) {
+        AND.push({
+          createdAt: {
+            gte: dateFrom,
+          },
+        });
+      }
+
+      if (dateTo) {
+        // Add a day to include the end date fully
+        const nextDay = new Date(dateTo);
+        nextDay.setDate(nextDay.getDate() + 1);
+
+        AND.push({
+          createdAt: {
+            lt: nextDay,
+          },
+        });
+      }
+
+      // If we have conditions, add them to whereConditions
+      if (AND.length > 0) {
+        whereConditions.AND = AND;
+      }
+
+      // Process the status filter
+
+      const claims = await prisma.claim.findMany({
+        where: whereConditions,
+        include: {
+          customer: true,
+          employee: true,
+          policyType: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      // Filter by status if necessary
+      let filteredClaims = claims;
+      if (status && status.toLowerCase() !== "all") {
+        filteredClaims = claims.filter((claim) => {
+          const metadata = claim.metadata as any;
+          return metadata && metadata.status === status.toUpperCase();
+        });
+      }
+
+      // Apply pagination to the filtered results
+      const paginatedClaims = filteredClaims.slice(skip, skip + limit);
+
+      res.json({
+        data: paginatedClaims,
+        pagination: {
+          total: filteredClaims.length,
+          page,
+          pages: Math.ceil(filteredClaims.length / limit),
+        },
+      });
+    } catch (error) {
+      console.error("Error filtering claims:", error);
+      res.status(500).json({ error: "Failed to filter claims" });
     }
   },
 };

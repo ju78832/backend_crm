@@ -9,6 +9,8 @@ router.use(authenticate);
 
 // Claim routes
 router.get("/", claimController.getAllClaims);
+// Search claims with optional filters
+router.get("/search_claims", claimController.filterClaims);
 router.get("/:id", claimController.getClaimById);
 router.post("/", claimController.createClaim);
 router.put("/:id", claimController.updateClaim);
