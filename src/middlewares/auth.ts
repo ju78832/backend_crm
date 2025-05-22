@@ -9,26 +9,27 @@ export const authenticate = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.split(" ")[1];
 
-    if (!token) {
-      return res.status(401).json({ error: "No token provided" });
+    if (!token || token.trim() === "") {
+      return res.status(401).json({ message: "Token Not Received" });
     }
 
     // Verify the token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Find the user by the auth id
-    const auth = await prisma.auth.findUnique({
+
+    const user = await prisma.userProfile.findUnique({
       where: { id: decoded.id },
-      include: { userProfile: true },
+      include: { auth: true },
     });
 
-    if (!auth) {
+    if (!user) {
       return res.status(401).json({ error: "User not found" });
     }
 
     // Attach user data to the request
-    req.user = auth;
-    req.userProfile = auth.userProfile;
+    req.user = user;
+    req.userProfile = user.auth;
 
     next();
   } catch (error) {

@@ -83,6 +83,7 @@ const authController = {
           },
         },
       });
+      console.log(token);
 
       res.status(200).json({
         message: "Login successful",
