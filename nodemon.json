@@ -1,6 +1,0 @@
-{
-  "watch": ["dist"],
-  "ext": "js",
-  "exec": "node --enable-source-maps dist/index.js",
-  "delay": "1000"
-}
