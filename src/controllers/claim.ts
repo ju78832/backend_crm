@@ -680,4 +680,7 @@ export const claimController = {
       res.status(500).json({ error: "Failed to filter claims" });
     }
   },
+  generate: async (req, res) => {
+    const { id } = req.params;
+  },
 };

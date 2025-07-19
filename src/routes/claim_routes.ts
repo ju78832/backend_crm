@@ -15,6 +15,7 @@ router.get("/:id", claimController.getClaimById);
 router.post("/", claimController.createClaim);
 router.put("/:id", claimController.updateClaim);
 router.delete("/:id", claimController.deleteClaim);
+router.get("/generate/:id", claimController.generate);
 
 // Additional routes
 router.get("/dashboard/stats", claimController.getClaimStats);
